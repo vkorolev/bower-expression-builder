@@ -41,7 +41,7 @@
 				this.children = [];
 			}
 
-			function Context (builder, node) {
+			function Context(builder, node) {
 				this.add = function (child) {
 					node.children.push(child);
 				};
@@ -62,6 +62,22 @@
 				};
 
 				this.replace = function (id, build) {
+					var builder = new GroupBuilder();
+					var fakeNode = new BuilderNode();
+					build(builder);
+					builder.apply(fakeNode);
+
+					var index = node.expressions.indexOf(this[id]);
+					var groupExpression = fakeNode.expressions[0];
+					groupExpression.id = id;
+					groupExpression.parent = node;
+					groupExpression.remove = function () {
+						var index = node.expressions.indexOf(groupExpression);
+						node.expressions.splice(index, 1);
+					};
+
+					this[id] = groupExpression;
+					node.expressions.splice(index, 1, groupExpression);
 				};
 			}
 
@@ -322,4 +338,4 @@
     }
 })(angular);
 angular.module("expression-builder").run(["$templateCache", function($templateCache) {$templateCache.put("expression-builder.group.html","<ul class=\"expression-builder-group\">\r\n    <li ng-repeat=\"exp in expression.expressions\"\r\n        ng-if=\"exp.isVisible()\"\r\n        eb-expression=\"exp\"\r\n        class=\"expression-builder-expression\">\r\n    </li>\r\n</ul>");
-	$templateCache.put("expression-builder.node.html","<ul class=\"expression-builder-node\">\r\n    <li ng-repeat=\"expression in node.expressions\"\r\n        ng-if=\"expression.isVisible()\"\r\n        eb-expression=\"expression\"\r\n        class=\"expression-builder-expression\">\r\n\r\n    </li>\r\n\r\n    <li ng-repeat=\"child in node.children\" eb-node=\"child\" class=\"expression-builder-child\">\r\n    </li>\r\n</ul>");}]);
+$templateCache.put("expression-builder.node.html","<ul class=\"expression-builder-node\">\r\n    <li ng-repeat=\"expression in node.expressions\"\r\n        ng-if=\"expression.isVisible()\"\r\n        eb-expression=\"expression\"\r\n        class=\"expression-builder-expression\">\r\n\r\n    </li>\r\n\r\n    <li ng-repeat=\"child in node.children\" eb-node=\"child\" class=\"expression-builder-child\">\r\n    </li>\r\n</ul>");}]);
