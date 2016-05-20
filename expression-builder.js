@@ -1,14 +1,28 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 (function (angular, undefined) {
 
-   angular.module('expression-builder', []);
+   var module = angular.module('expression-builder', []);
 
    require('./builder/expression-builder')(angular);
    require('./model/eb-expression')(angular);
    require('./model/eb-node')(angular);
 
+   var SerializationService = require('./services/serialization'),
+       DeserializationService = require('./services/deserialization');
+
+   module.factory('expressionBuilderSerializer', [function () {
+      return {
+         serialize: function (node) {
+            return new SerializationService(node).serialize();
+         },
+         deserialize: function (schema, data) {
+            return new DeserializationService(schema).deserialize(data);
+         }
+      }
+   }]);
+
 })(angular);
-},{"./builder/expression-builder":2,"./model/eb-expression":7,"./model/eb-node":8}],2:[function(require,module,exports){
+},{"./builder/expression-builder":2,"./model/eb-expression":7,"./model/eb-node":8,"./services/deserialization":10,"./services/serialization":12}],2:[function(require,module,exports){
 var nodeSchemaFactoryT = require('./node-schema'),
 	 groupSchemaFactoryT = require('./group-schema'),
 	 patch = require('../services/patch'),
@@ -173,26 +187,16 @@ function Line(GroupSchema) {
 	};
 }
 },{"../model/expression-group":9,"../services/utils":13}],5:[function(require,module,exports){
-var Node = require('./node');
-var Line = require('./line');
-var ExpressionGroup = require('../model/expression-group');
-var DeserializationService = require('../services/deserialization');
-var SerializationService = require('../services/serialization');
+var Node = require('./node'),
+    Line = require('./line'),
+    ExpressionGroup = require('../model/expression-group');
 
 module.exports = function (GroupSchema, undefined) {
     function NodeSchema(map) {
-        var self = this;
-
         this.plan = [];
         this.planMap = {};
         this.schemaMap = map || {};
-        this.deserialize = function (data) {
-            return new DeserializationService(self, GroupSchema)
-                .deserialize(data);
-        };
-        this.serialize = function (node) {
-            return new SerializationService(node).serialize();
-        };
+        this.GroupSchema = GroupSchema;
     }
 
     NodeSchema.prototype.clone = function () {
@@ -275,7 +279,7 @@ module.exports = function (GroupSchema, undefined) {
 
     return NodeSchema;
 };
-},{"../model/expression-group":9,"../services/deserialization":10,"../services/serialization":12,"./line":4,"./node":6}],6:[function(require,module,exports){
+},{"../model/expression-group":9,"./line":4,"./node":6}],6:[function(require,module,exports){
 var SerializationService = require('../services/serialization');
 
 module.exports = Node;
@@ -429,86 +433,86 @@ function Group() {
 
 },{}],10:[function(require,module,exports){
 var utility = require('./utils'),
-	 Node = require('../builder/node');
+    Node = require('../builder/node');
 
 module.exports = DeserializationService;
 
 function traverse(node, map) {
-	if (!map.hasOwnProperty(node.id)) {
-		map[node.id] = node;
-	}
+    if (!map.hasOwnProperty(node.id)) {
+        map[node.id] = node;
+    }
 
-	for (var i = 0, length = node.children.length; i < length; i++) {
-		var child = node.children[0]
-		traverse(child, map);
-	}
+    for (var i = 0, length = node.children.length; i < length; i++) {
+        var child = node.children[0]
+        traverse(child, map);
+    }
 }
 
-function DeserializationService(schema, GroupSchema) {
-	function deserialize(data, parent, nodeMap) {
-		nodeMap = nodeMap || {};
+function DeserializationService(schema) {
+    function deserialize(data, parent, nodeMap) {
+        nodeMap = nodeMap || {};
 
-		if (!parent) {
-			var node = new Node(data.id, schema);
-			schema.apply(node);
-			traverse(node, nodeMap);
-			node.clear();
-		} else {
-			var node = nodeMap[data.id];
-			node = node.clone();
-			parent.addChildAfter(node);
-			traverse(parent, nodeMap);
-			node.clear();
-		}
+        if (!parent) {
+            var node = new Node(data.id, schema);
+            schema.apply(node);
+            traverse(node, nodeMap);
+            node.clear();
+        } else {
+            var node = nodeMap[data.id];
+            node = node.clone();
+            parent.addChildAfter(node);
+            traverse(parent, nodeMap);
+            node.clear();
+        }
 
-		node.attributes = data.attributes;
-		deserializeLine(node, node.line, data.line);
+        node.attributes = data.attributes;
+        deserializeLine(node, node.line, data.line);
 
-		var children = data.children,
-			 length = children.length;
+        var children = data.children,
+            length = children.length;
 
-		for (var i = 0; i < length; i++) {
-			var child = children[i];
-			new DeserializationService(schema.schemaMap[child.id], GroupSchema).deserialize(child, node, nodeMap);
+        for (var i = 0; i < length; i++) {
+            var child = children[i];
+            new DeserializationService(schema.schemaMap[child.id]).deserialize(child, node, nodeMap);
 
-		}
+        }
 
-		return node;
-	}
+        return node;
+    }
 
-	function deserializeLine(node, line, dataLine) {
-		for (var i = 0, length = dataLine.length; i < length; i++) {
-			var serializedGroup = dataLine[i];
+    function deserializeLine(node, line, dataLine) {
+        for (var i = 0, length = dataLine.length; i < length; i++) {
+            var serializedGroup = dataLine[i];
 
-			deserializeGroup(node, line, line.get(serializedGroup.id), serializedGroup);
-		}
-	}
+            deserializeGroup(node, line, line.get(serializedGroup.id), serializedGroup);
+        }
+    }
 
-	function deserializeGroup(node, line, group, dataGroup) {
-		var serializedExpressions = dataGroup.expressions,
-			 length = serializedExpressions.length;
+    function deserializeGroup(node, line, group, dataGroup) {
+        var serializedExpressions = dataGroup.expressions,
+            length = serializedExpressions.length;
 
-		for (var i = 0; i < length; i++) {
-			var serializedExp = serializedExpressions[i];
+        for (var i = 0; i < length; i++) {
+            var serializedExp = serializedExpressions[i];
 
-			var index = utility.indexOf(group.expressions, function (expression) {
-				return expression.id === serializedExp.id;
-			});
+            var index = utility.indexOf(group.expressions, function (expression) {
+                return expression.id === serializedExp.id;
+            });
 
-			utility.override(group.expressions[index], serializedExp);
-		}
+            utility.override(group.expressions[index], serializedExp);
+        }
 
-		for (var i = 0; i < length; i++) {
-			if (serializedExpressions[i].method) {
-				serializedExpressions[i].method.forEach(function (m) {
-					group.expressions[index][m](node, line);
-					group.expressions[index].method = serializedExpressions[i].method;
-				});
-			}
-		}
-	}
+        for (var i = 0; i < length; i++) {
+            if (serializedExpressions[i].method) {
+                serializedExpressions[i].method.forEach(function (m) {
+                    group.expressions[index][m](node, line);
+                    group.expressions[index].method = serializedExpressions[i].method;
+                });
+            }
+        }
+    }
 
-	this.deserialize = deserialize;
+    this.deserialize = deserialize;
 }
 
 },{"../builder/node":6,"./utils":13}],11:[function(require,module,exports){
