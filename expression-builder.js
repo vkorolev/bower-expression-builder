@@ -177,17 +177,21 @@ var Node = require('./node');
 var Line = require('./line');
 var ExpressionGroup = require('../model/expression-group');
 var DeserializationService = require('../services/deserialization');
+var SerializationService = require('../services/serialization');
 
 module.exports = function (GroupSchema, undefined) {
     function NodeSchema(map) {
         var self = this;
-        var deserializationService = new DeserializationService(self, GroupSchema);
 
         this.plan = [];
         this.planMap = {};
         this.schemaMap = map || {};
         this.deserialize = function (data) {
-            return deserializationService.deserialize(data);
+            return new DeserializationService(self, GroupSchema)
+                .deserialize(data);
+        };
+        this.serialize = function (node) {
+            return new SerializationService(node).serialize();
         };
     }
 
@@ -271,7 +275,7 @@ module.exports = function (GroupSchema, undefined) {
 
     return NodeSchema;
 };
-},{"../model/expression-group":9,"../services/deserialization":10,"./line":4,"./node":6}],6:[function(require,module,exports){
+},{"../model/expression-group":9,"../services/deserialization":10,"../services/serialization":12,"./line":4,"./node":6}],6:[function(require,module,exports){
 var SerializationService = require('../services/serialization');
 
 module.exports = Node;
