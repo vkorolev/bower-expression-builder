@@ -400,11 +400,11 @@ module.exports = function (angular) {
             restrict: 'A',
             link: function (scope, element, attr) {
                 var getter = $parse(attr.ebClass),
-                    classes = '',
-                    evaluate = evaluateFactory(null, [scope.node]);
+                    contextGetter = $parse(attr.ebClassContext),
+                    classes = '';
 
                 scope.$watch(function () {
-                    return evaluate(getter(scope));
+                    return evaluateFactory(contextGetter(scope), [scope.node])(getter(scope));
                 }, function (value) {
                     if(value) {
                         var oldClasses = classes;
@@ -466,16 +466,16 @@ module.exports = function (angular) {
 					var key = keys[i],
 						watch = scope.expression.$watch[key];
 
-					watchFactory(scope.expression[key], watch);
+					watchFactory(scope.expression, key, watch);
 				}
 
 				var template = $templateCache.get(scope.expression.template);
 				var expression = $compile(template)(scope);
 				element.append(expression);
 
-				function watchFactory (watchExpression, handler) {
+				function watchFactory (context, key, handler) {
 					scope.$watch(function () {
-						return evaluate(watchExpression);
+						return evaluate(context[key]);
 					}, function (newVal, oldVal) {
 						handler.apply(scope.expression, [newVal, oldVal]);
 					}, true);
