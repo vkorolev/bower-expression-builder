@@ -65,7 +65,8 @@ module.exports = function (angular) {
 
 							if (utility.isFunction(sourceFunction)) {
 								expression[key] = function () {
-									var result = sourceFunction();
+									var argList = utility.asArray(arguments);
+									var result = sourceFunction.apply(expression, argList);
 
 									// TODO add decorator for muttable methods instead of trigger
 									if (!line.immutable) {
@@ -689,7 +690,8 @@ function withFactory(object, key, sourceFunction) {
         var args = utility.asArray(arguments);
 
         object[key] = function () {
-            return sourceFunction.apply(object, args);
+            var argList = utility.asArray(arguments);
+            return sourceFunction.apply(object, args.concat(argList));
         };
     };
 
