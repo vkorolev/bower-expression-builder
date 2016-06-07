@@ -454,11 +454,12 @@ module.exports = function (angular) {
 			restrict: 'A',
 			scope: {
 				expression: '=ebExpression',
-				node: '='
+				node: '=',
+				line: '='
 			},
 			link: function (scope, element, attr) {
 				var $watch = scope.expression.$watch = scope.expression.$watch || {};
-				var evaluate = evaluateFactory(scope.expression, [scope.node]);
+				var evaluate = evaluateFactory(scope.expression, [scope.node, scope.line]);
 
 				var keys = Object.keys($watch),
 					length = keys.length;
@@ -478,7 +479,7 @@ module.exports = function (angular) {
 					scope.$watch(function () {
 						return evaluate(context[key]);
 					}, function (newVal, oldVal) {
-						handler.apply(scope.expression, [newVal, oldVal]);
+						handler.apply(scope.expression, [newVal, oldVal, scope.node, scope.line]);
 					}, true);
 				}
 			}
@@ -897,5 +898,5 @@ function override(dst, src) {
 
 },{}]},{},[1]);
 
-angular.module("expression-builder").run(["$templateCache", function($templateCache) {$templateCache.put("eb-group.html","<ul class=\"expression-builder-group\">\r\n    <li ng-repeat=\"exp in expression.expressions\"\r\n        eb-expression=\"exp\"\r\n        node=\"node\"\r\n        class=\"expression-builder-expression\">\r\n    </li>\r\n</ul>");
-$templateCache.put("eb-node.html","<ul class=\"expression-builder-node\" eb-class=\"node.attr(\'class\')\">\r\n    <li ng-repeat=\"expression in node.line.expressions\"\r\n        eb-expression=\"expression\"\r\n        node=\"node\"\r\n        class=\"expression-builder-expression\">\r\n    </li>\r\n\r\n    <li ng-repeat=\"child in node.children\" eb-node=\"child\" class=\"expression-builder-child\">\r\n    </li>\r\n</ul>");}]);
+angular.module("expression-builder").run(["$templateCache", function($templateCache) {$templateCache.put("eb-group.html","<ul class=\"expression-builder-group\">\r\n    <li ng-repeat=\"exp in expression.expressions\"\r\n        eb-expression=\"exp\"\r\n        node=\"node\"\r\n        line=\"line\"\r\n        class=\"expression-builder-expression\">\r\n    </li>\r\n</ul>");
+$templateCache.put("eb-node.html","<ul class=\"expression-builder-node\" eb-class=\"node.attr(\'class\')\">\r\n    <li ng-repeat=\"expression in node.line.expressions\"\r\n        eb-expression=\"expression\"\r\n        node=\"node\"\r\n        line=\"node.line\"\r\n        class=\"expression-builder-expression\">\r\n    </li>\r\n\r\n    <li ng-repeat=\"child in node.children\" eb-node=\"child\" class=\"expression-builder-child\">\r\n    </li>\r\n</ul>");}]);
